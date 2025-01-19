@@ -21,6 +21,11 @@ pipeline {
                 sh 'npm test'
             }
         }
+        stage('Deploy with Ansible') {
+            steps {
+                sh 'ansible-playbook -i inventory deploy_app.yml'
+            }
+        }
     }
     post {
         always {

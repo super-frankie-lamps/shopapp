@@ -1,0 +1,85 @@
+- name: Deploy application
+  hosts: app
+  become: true
+
+  tasks:
+    # Установка Java 17
+    - name: Install Java 17
+      ansible.builtin.yum:
+        name:
+          - java-17-amazon-corretto
+        state: present
+
+    # Установка Node.js 18
+    - name: Install Node.js 18
+      ansible.builtin.shell: |
+        curl -fsSL https://rpm.nodesource.com/setup_18.x | bash -
+        yum install -y nodejs
+
+    # Установка Jenkins
+    - name: Add Jenkins GPG key
+      ansible.builtin.shell: |
+        rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+
+    - name: Add Jenkins repository without GPG validation
+      ansible.builtin.shell: |
+        curl -fsSL https://pkg.jenkins.io/redhat-stable/jenkins.repo -o /etc/yum.repos.d/jenkins.repo
+        sed -i 's/gpgcheck=1/gpgcheck=0/' /etc/yum.repos.d/jenkins.repo
+
+    - name: Install Jenkins
+      ansible.builtin.yum:
+        name: jenkins
+        state: present
+
+    - name: Start and enable Jenkins service
+      ansible.builtin.service:
+        name: jenkins
+        state: started
+        enabled: true
+
+    # Установка Ansible
+    - name: Install Ansible
+      ansible.builtin.yum:
+        name:
+          - ansible
+        state: present
+
+    # Установка Git
+    - name: Install Git
+      ansible.builtin.yum:
+        name: git
+        state: present
+
+    # Установка дополнительных зависимостей
+    - name: Install additional dependencies
+      ansible.builtin.yum:
+        name:
+          - gcc-c++
+          - make
+        state: present
+
+    - name: Clone the application repository
+      ansible.builtin.git:
+        repo: https://github.com/super-frankie-lamps/shopapp.git
+        dest: /home/ec2-user/shopapp
+        version: main
+
+    - name: Install application dependencies
+      ansible.builtin.shell: |
+        cd /home/ec2-user/shopapp
+        npm install
+
+    - name: Build the application
+      ansible.builtin.shell: |
+        cd /home/ec2-user/shopapp
+        npm run build
+
+    - name: Start the application
+      ansible.builtin.shell: |
+        cd /home/ec2-user/shopapp
+        nohup npm start &
+
+    - name: Verify the application is running
+      ansible.builtin.uri:
+        url: http://localhost:3000
+        status_code: 200
